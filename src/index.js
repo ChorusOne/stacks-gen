@@ -10,16 +10,10 @@ const stacks_transactions = require('@stacks/transactions')
 const c32c = require('c32check')
 const wif = require('wif')
 const yargs = require('yargs')
- 
+
 const { generateMnemonic, mnemonicToSeed } = bip39
 const { bip32, networks, ECPair } = bitcoin
 const { ChainID, getAddressFromPrivateKey, TransactionVersion } = stacks_transactions
-
-const networkDerivationPath = `m/44'/5757'/0'/0/0`
-const derivationPaths = {
-  [ChainID.Mainnet]: networkDerivationPath,
-  [ChainID.Testnet]: networkDerivationPath,
-}
 
 function privateKeyToWIF(private_key_hex, mainnet) {
   return wif.encode(mainnet ? 0x80 : 0xEF, Buffer.from(private_key_hex, 'hex'), true)
@@ -35,9 +29,9 @@ function ecPairToHexString(secretKey) {
     }
 }
 
-function deriveStxAddressChain(chain) {
+function deriveStxAddressChain(chain, derivationPath) {
   return (rootNode) => {
-    const childKey = rootNode.derivePath(derivationPaths[chain])
+    const childKey = rootNode.derivePath(derivationPath)
     if (!childKey.privateKey) {
       throw new Error('Unable to derive private key from `rootNode`, bip32 master keychain')
     }
@@ -70,10 +64,10 @@ function hash160(data) {
   return ripemd160(sha256(data))
 }
 
-async function generateKeys(seed_phrase, mainnet) {
+async function generateKeys(seed_phrase, mainnet, derivationPath) {
   const seedBuffer = await mnemonicToSeed(seed_phrase)
   const masterKeychain = bip32.fromSeed(seedBuffer)
-  const keys = deriveStxAddressChain(mainnet ? ChainID.Mainnet : ChainID.Testnet)(masterKeychain)
+  const keys = deriveStxAddressChain(mainnet ? ChainID.Mainnet : ChainID.Testnet, derivationPath)(masterKeychain)
 
   const uncompressed_hex = bitcoin.ECPair.fromPublicKey(
     Buffer.from(keys.publicKey, 'hex'),
@@ -90,7 +84,8 @@ async function generateKeys(seed_phrase, mainnet) {
     stacking: `{ hashbytes: 0x${c32c.c32addressDecode(keys.address)[1]}, version: 0x00 }`,
     btc: c32c.c32ToB58(keys.address),
     wif: privateKeyToWIF(keys.privateKey, mainnet),
-  }    
+    derivationPath: derivationPath
+  }
 }
 
 yargs
@@ -113,6 +108,12 @@ yargs
     default: 24,
     describe: 'Use 24 or 12 secret phrase',
   })
+  .option('path', {
+    alias: 'd',
+    default: `m/44'/5757'/0'/0/0`,
+    describe: 'The derivation path for network, e.g. "m/44\'/5757\'/0\'/0/0"',
+    type: 'string',
+  })
   .choices('w', [12, 24])
   .command('sk', 'Generate keys for Stacks 2.0', (yargs) => {
     yargs.positional('sk', {
@@ -125,7 +126,7 @@ yargs
     const phrase = argv.phrase || generateMnemonic(entropy, randombytes)
     // console.log('generate', phrase, argv.testnet)
 
-    console.log(JSON.stringify(await generateKeys(phrase, mainnet), null, 2))
+    console.log(JSON.stringify(await generateKeys(phrase, mainnet, argv.path), null, 2))
   })
   .command('pk <key>', 'Generate keys for Stacks 2.0 from private key', (yargs) => {
     yargs.positional('key', {
@@ -170,6 +171,7 @@ yargs
   .demandCommand(1, 'You need at least one command')
   .requiresArg('w')
   .requiresArg('p')
+  .requiresArg('d')
   .strictCommands(true)
   .strictOptions(true)
   .help()
