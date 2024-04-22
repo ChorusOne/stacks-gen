@@ -3,7 +3,14 @@
 Generate all the keys needed for use with Stacks 2.0 Mining and Stacking
 
 ## prerequisites
-You will need to have node.js and npm installed first.  Head over to the [node.js download](https://nodejs.org/en/download/) page
+You will need to have node.js and npm installed first.  Head over to the
+[node.js download](https://nodejs.org/en/download/) page.
+Tested ok with `node16` but not `node18`.
+
+## install deps
+```
+yarn install # avoid `npm install`
+```
 
 ## usage with npx
 If `npx` is not installed, install it first
