@@ -110,9 +110,13 @@ yargs
   })
   .option('path', {
     alias: 'd',
-    default: `m/44'/5757'/0'/0/0`,
     describe: 'The derivation path for network, e.g. "m/44\'/5757\'/0\'/0/0"',
     type: 'string',
+  })
+  .option('account', {
+    alias: 'a',
+    describe: 'Specify the account number for the derivation path',
+    type: 'number',
   })
   .choices('w', [12, 24])
   .command('sk', 'Generate keys for Stacks 2.0', (yargs) => {
@@ -126,7 +130,19 @@ yargs
     const phrase = argv.phrase || generateMnemonic(entropy, randombytes)
     // console.log('generate', phrase, argv.testnet)
 
-    console.log(JSON.stringify(await generateKeys(phrase, mainnet, argv.path), null, 2))
+    let derivationPath;
+    if (argv.path && argv.account) {
+      console.error('Error: Only one of --path or --account can be used, not both.');
+      process.exit(1);
+    } else if (argv.path) {
+      derivationPath = argv.path;
+    } else if (argv.account) {
+      derivationPath = `m/44'/5757'/${argv.account}'/0/0`;
+    } else {
+      derivationPath = `m/44'/5757'/0'/0/0`; // default derivation path
+    }
+
+    console.log(JSON.stringify(await generateKeys(phrase, mainnet, derivationPath), null, 2))
   })
   .command('pk <key>', 'Generate keys for Stacks 2.0 from private key', (yargs) => {
     yargs.positional('key', {
@@ -172,6 +188,7 @@ yargs
   .requiresArg('w')
   .requiresArg('p')
   .requiresArg('d')
+  .requiresArg('a')
   .strictCommands(true)
   .strictOptions(true)
   .help()
