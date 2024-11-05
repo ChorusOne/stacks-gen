@@ -170,8 +170,8 @@ yargs
       wif: privateKeyToWIF(ec_pair_compressed.privateKey, mainnet),
     }, null, 2))
   })
-  .command('uncompress_pubpkey', 'Uncompress a public key', (yargs) => {
-    yargs.positional('uncompress_pubpkey', {
+  .command('uncompress_pubkey <key>', 'Uncompress a public key', (yargs) => {
+    yargs.positional('key', {
       type: 'string',
       describe: 'Uncompress a public key'
     })
